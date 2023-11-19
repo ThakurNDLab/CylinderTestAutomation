@@ -105,8 +105,8 @@ if __name__ == '__main__':
 	train_x = scaler.fit_transform(train_x)
 	test_x = scaler.transform(test_x)
 
-	train_y = train_y[:-int(timesteps-1), :]
-	test_y = test_y[:-int(timesteps-1), :]
+	train_y = train_y[int(timesteps-1):, :]
+	test_y = test_y[int(timesteps-1):, :]
 
 	train_x = reshape_array(train_x, timesteps)
 	test_x = reshape_array(test_x, timesteps)

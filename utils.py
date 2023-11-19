@@ -66,22 +66,38 @@ def augment_data(x, noise_factor=0.05):
 	x_augmented = x + noise
 	return x_augmented
 
-def majority_voting_filter(predictions, window_size):
-	filtered_predictions = []
-	for i in range(len(predictions)):
-		start_index = max(0, i - window_size)
-		end_index = min(len(predictions), i + window_size + 1)
-		window_predictions = predictions[start_index:end_index]
-		mode_prediction = mode(window_predictions)[0][0]
-		filtered_predictions.append(mode_prediction)
-	return np.array(filtered_predictions)
+def process_action_column(action_column, min_duration, gap_tolerance):
+    length = len(action_column)
+    processed = np.zeros(length, dtype=int)
+    action_start = None
+    in_action = False
+    for i in range(length):
+        if action_column[i] == 1:
+            if not in_action:
+                action_start = i
+                in_action = True
+            if i == length - 1 or action_column[i + 1] == 0:
+                action_end = i
+                if action_end - action_start + 1 >= min_duration:
+                    processed[action_start:action_end + 1] = 1
+                in_action = False
+        elif in_action and i - action_start < min_duration + gap_tolerance:
+            continue
+        else:
+            in_action = False
+    return processed
+
+def process_actions(data, min_duration=5, gap_tolerance=3):
+    action_1 = process_action_column(data[:, 0], min_duration, gap_tolerance)
+    action_2 = process_action_column(data[:, 1], min_duration, gap_tolerance)
+    return np.column_stack((action_1, action_2))
 
 def cylinder_touch_detection(X, model, num_nodes, edge_index, timesteps):
 	edge_index = torch.from_numpy(edge_index)
 	preds = model(X, edge_index)
 	preds = preds.cpu().data.numpy()
 	y = np.where(preds>=0.5, 1, 0)
-	y = majority_voting_filter(y, 5)
+	y = process_actions(y, 5)
 	y = pd.DataFrame(y)
 	starts_left = []
 	ends_left = []
@@ -99,65 +115,65 @@ def cylinder_touch_detection(X, model, num_nodes, edge_index, timesteps):
 			elif left==1 and right==0: 
 				right=1
 				rc+=1
-				starts_right.append(i+int((timesteps-1)/2))
+				starts_right.append(i)
 			elif left==0 and right==1:
 				left=1
 				lc+=1
-				starts_left.append(i+int((timesteps-1)/2))
+				starts_left.append(i)
 			else:
 				left=1
 				right=1
 				lc+=1
-				starts_left.append(i+int((timesteps-1)/2))
+				starts_left.append(i)
 				rc+=1
-				starts_right.append(i+int((timesteps-1)/2))
+				starts_right.append(i)
 				
 		elif y.iloc[i,0]==0 and y.iloc[i,1]==1:
 			if left==1 and right==1:
 				left=0
-				ends_left.append(i+int((timesteps-1)/2))
+				ends_left.append(i)
 			elif left==1 and right==0: 
 				left=0
-				ends_left.append(i+int((timesteps-1)/2))
+				ends_left.append(i)
 				right=1
 				rc+=1
-				starts_right.append(i+int((timesteps-1)/2))
+				starts_right.append(i)
 			elif left==0 and right==1:
 				continue
 			else:
 				right=1
 				rc+=1
-				starts_right.append(i+int((timesteps-1)/2))
+				starts_right.append(i)
 				
 		elif y.iloc[i,0]==1 and y.iloc[i,1]==0:
 			if left==1 and right==1:
 				right=0
-				ends_right.append(i+int((timesteps-1)/2))
+				ends_right.append(i)
 			elif left==1 and right==0: 
 				continue
 			elif left==0 and right==1:
 				left=1
 				lc+=1
-				starts_left.append(i+int((timesteps-1)/2))
+				starts_left.append(i)
 				right=0
-				ends_right.append(i+int((timesteps-1)/2))
+				ends_right.append(i)
 			else:
 				left=1
 				lc+=1
-				starts_left.append(i+int((timesteps-1)/2))
+				starts_left.append(i)
 		
 		else:
 			if left==1 and right==1:
 				right=0
-				ends_right.append(i+int((timesteps-1)/2))
+				ends_right.append(i)
 				left=0
-				ends_left.append(i+int((timesteps-1)/2))
+				ends_left.append(i)
 			elif left==1 and right==0: 
 				left=0
-				ends_left.append(i+int((timesteps-1)/2))
+				ends_left.append(i)
 			elif left==0 and right==1:
 				right=0
-				ends_right.append(i+int((timesteps-1)/2))
+				ends_right.append(i)
 			else:
 				continue
 		
