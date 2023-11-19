@@ -9,24 +9,24 @@ import numpy as np
 
 
 def compute_velocities(data):
-    velocities = np.diff(data, axis=1)
-    euclidean_velocities = np.linalg.norm(velocities, axis=2)
-    euclidean_velocities = euclidean_velocities[:, :, np.newaxis, :]
-    zero_pad = np.zeros((data.shape[0], 1, 1, data.shape[3]))
-    euclidean_velocities = np.concatenate([zero_pad, euclidean_velocities], axis=1)
-    return euclidean_velocities
+	velocities = np.diff(data, axis=1)
+	euclidean_velocities = np.linalg.norm(velocities, axis=2)
+	euclidean_velocities = euclidean_velocities[:, :, np.newaxis, :]
+	zero_pad = np.zeros((data.shape[0], 1, 1, data.shape[3]))
+	euclidean_velocities = np.concatenate([zero_pad, euclidean_velocities], axis=1)
+	return euclidean_velocities
 
 def compute_angle(A, O, B):
-    a = np.array(A) - np.array(O)
-    b = np.array(B) - np.array(O)
-    dot_product = np.einsum('ijk,ijk->ij', a, b)
-    norm_a = np.linalg.norm(a, axis=2)
-    norm_b = np.linalg.norm(b, axis=2)
-    epsilon = 1e-8
-    cos_angle = dot_product / (norm_a * norm_b + epsilon)
-    cos_angle = np.clip(cos_angle, -1, 1)
-    angle = np.arccos(cos_angle)
-    return angle
+	a = np.array(A) - np.array(O)
+	b = np.array(B) - np.array(O)
+	dot_product = np.einsum('ijk,ijk->ij', a, b)
+	norm_a = np.linalg.norm(a, axis=2)
+	norm_b = np.linalg.norm(b, axis=2)
+	epsilon = 1e-8
+	cos_angle = dot_product / (norm_a * norm_b + epsilon)
+	cos_angle = np.clip(cos_angle, -1, 1)
+	angle = np.arccos(cos_angle)
+	return angle
 
 def compute_angles_for_sequence(data):
 	angles = []
@@ -67,30 +67,30 @@ def augment_data(x, noise_factor=0.05):
 	return x_augmented
 
 def process_action_column(action_column, min_duration, gap_tolerance):
-    length = len(action_column)
-    processed = np.zeros(length, dtype=int)
-    action_start = None
-    in_action = False
-    for i in range(length):
-        if action_column[i] == 1:
-            if not in_action:
-                action_start = i
-                in_action = True
-            if i == length - 1 or action_column[i + 1] == 0:
-                action_end = i
-                if action_end - action_start + 1 >= min_duration:
-                    processed[action_start:action_end + 1] = 1
-                in_action = False
-        elif in_action and i - action_start < min_duration + gap_tolerance:
-            continue
-        else:
-            in_action = False
-    return processed
+	length = len(action_column)
+	processed = np.zeros(length, dtype=int)
+	action_start = None
+	in_action = False
+	for i in range(length):
+		if action_column[i] == 1:
+			if not in_action:
+				action_start = i
+				in_action = True
+			if i == length - 1 or action_column[i + 1] == 0:
+				action_end = i
+				if action_end - action_start + 1 >= min_duration:
+					processed[action_start:action_end + 1] = 1
+				in_action = False
+		elif in_action and i - action_start < min_duration + gap_tolerance:
+			continue
+		else:
+			in_action = False
+	return processed
 
 def process_actions(data, min_duration=5, gap_tolerance=3):
-    action_1 = process_action_column(data[:, 0], min_duration, gap_tolerance)
-    action_2 = process_action_column(data[:, 1], min_duration, gap_tolerance)
-    return np.column_stack((action_1, action_2))
+	action_1 = process_action_column(data[:, 0], min_duration, gap_tolerance)
+	action_2 = process_action_column(data[:, 1], min_duration, gap_tolerance)
+	return np.column_stack((action_1, action_2))
 
 def cylinder_touch_detection(X, model, num_nodes, edge_index, timesteps):
 	edge_index = torch.from_numpy(edge_index)
