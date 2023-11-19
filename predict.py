@@ -42,17 +42,31 @@ def predict_cylinder(filename, project_test_directory, fps, timesteps, edge_inde
 
 	left_drags = []
 	for i in range(len(datasheet['Left_Touch_Start'])):
-		left_start_value = datasheet['Left_Touch_Start'].iloc[i-1]
-		left_end_value = datasheet['Left_Touch_Ends'].iloc[i-1]
-		dist=0
-		if left_start_value >= 0 and left_start_value < len(X_gcn):
-			for i in range(left_end_value - left_start_value):
-				left_x1 = X.at[((left_start_value+i-1)+int(timesteps-1)),-1,0,1]
-				left_y1 = X.at[((left_start_value+i-1)+int(timesteps-1)),-1, 1,1]
-				left_x2 = X.at[((left_start_value+i)+int(timesteps-1)),-1,0,1]
-				left_y2 = X.at[((left_start_value+i)+int(timesteps-1)),-1,1,1]
-				dist += math.sqrt(pow((left_y2 - left_y1),2) + pow((left_x2 - left_x1),2))
-		left_drags.append[dist]
+    	left_start_value = datasheet['Left_Touch_Start'].iloc[i]
+    	left_end_value = datasheet['Left_Touch_Ends'].iloc[i]
+    	dist = 0
+    	if 0 <= left_start_value < len(X):
+        	for j in range(left_end_value - left_start_value):
+            	left_x1 = X[int(left_start_value -1 + j + timesteps - 1), -1, 0, 1]
+            	left_y1 = X[int(left_start_value -1 + j + timesteps - 1), -1, 1, 1]
+            	left_x2 = X[int(left_start_value + j + timesteps - 1), -1, 0, 1]
+            	left_y2 = X[int(left_start_value + j + timesteps - 1), -1, 1, 1]
+            	dist += math.sqrt(pow((left_y2 - left_y1), 2) + pow((left_x2 - left_x1), 2))
+    	left_drags.append(dist)
+
+    right_drags = []
+	for i in range(len(datasheet['Right_Touch_Start'])):
+    	right_start_value = datasheet['Right_Touch_Start'].iloc[i]
+    	right_end_value = datasheet['Right_Touch_Ends'].iloc[i]
+    	dist = 0
+    	if 0 <= right_start_value < len(X):
+        	for j in range(right_end_value - right_start_value):
+            	right_x1 = X[int(right_start_value -1 + j + timesteps - 1), -1, 0, 3]
+            	right_y1 = X[int(right_start_value -1 + j + timesteps - 1), -1, 1, 3]
+            	right_x2 = X[int(right_start_value + j  + timesteps - 1), -1, 0, 3]
+            	right_y2 = X[int(right_start_value + j + timesteps - 1), -1, 1, 3]
+            	dist += math.sqrt(pow((right_y2 - right_y1), 2) + pow((right_x2 - right_x1), 2))
+    	right_drags.append(dist)
 
 	right_drags = []
 	for i in range(len(datasheet['Right_Touch_Start'])):

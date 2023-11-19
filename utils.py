@@ -185,10 +185,10 @@ def cylinder_touch_detection(X, model, num_nodes, edge_index, timesteps):
 			continue
 			
 	# Create series objects from the arrays
-	starts_left = pd.DataFrame(starts_left, columns=['Left_Touch_Start'])
-	ends_left = pd.DataFrame(ends_left, columns=['Left_Touch_Ends'])
-	starts_right = pd.DataFrame(starts_right, columns=['Right_Touch_Start'])
-	ends_right = pd.DataFrame(ends_right, columns=['Right_Touch_Ends'])
+	starts_left = pd.DataFrame((starts_left+1), columns=['Left_Touch_Start'])
+	ends_left = pd.DataFrame((ends_left+1), columns=['Left_Touch_Ends'])
+	starts_right = pd.DataFrame((starts_right+1), columns=['Right_Touch_Start'])
+	ends_right = pd.DataFrame((ends_right+1), columns=['Right_Touch_Ends'])
 	
 	datasheet = pd.concat([starts_left, ends_left, starts_right, ends_right], axis=1)
 	return datasheet, lc, rc, tc, y
