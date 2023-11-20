@@ -29,6 +29,9 @@ class LSTMAttn(nn.Module):
 		self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True, bidirectional=True)
 		self.attention = nn.Linear(2 * hidden_size, 1)
 		self.leaky = nn.LeakyReLU(0.1)
+		self.hidden_state = None
+	def reset_hidden_state(self):
+		self.hidden_state = None
 	def forward(self, x):
 		output, (ht, ct) = self.lstm(x)
 		weights = torch.softmax(self.attention(output), dim=1)
@@ -63,8 +66,11 @@ class BehaviorModel(nn.Module):
 		
 		self.sigmoid = nn.Sigmoid()
 
+	def reset_hidden_state(self):
+		self.lstm.reset_hidden_state()
+
 	def forward(self, x, edge_index):
-		xg = x[:,0,:,:]
+		xg = x[:,-1,:,:]
 		xl = x.view(x.shape[0], x.shape[1], (x.shape[2])*(x.shape[3]))
 		xg = self.gcn1(xg, edge_index)
 		xg = self.gcn2(xg, edge_index)

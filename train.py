@@ -37,6 +37,19 @@ seed = 42
 np.random.seed(seed)
 torch.manual_seed(seed)
 
+def find_zero_stretches(B, stretch_length=150):
+	stretches = []
+	count = 0
+	for i in range(len(B)):
+		if B[i, 0] == 0 and B[i, 1] == 0:
+			count += 1
+			if count == stretch_length:
+				stretches.append((i - stretch_length + 1, i + 1))
+				count = 0
+		else:
+			count = 0
+	return stretches
+
 if __name__ == '__main__':
 
 	print('Data Preprocessing...')
@@ -125,6 +138,29 @@ if __name__ == '__main__':
 	train_x = np.concatenate([train_x, train_angles], axis=2)
 	test_x = np.concatenate([test_x, test_angles], axis=2)
 
+	trainstretches = find_zero_stretches(train_y)
+	teststretches = find_zero_stretches(test_y)
+
+	id_trX = []
+	id_trY = []
+	id_teX = []
+	id_teY = []
+
+	for start, end in trainstretches:
+		id_trY.extend(range(start, end))
+		id_trX.extend(range(start, end))
+
+	train_x = np.delete(train_x, id_trX, axis=0)
+	train_y = np.delete(train_y, id_trY, axis=0)
+
+	for start, end in teststretches:
+		id_teY.extend(range(start, end))
+		id_teX.extend(range(start, end))
+
+	test_x = np.delete(test_x, id_teX, axis=0)
+	test_y = np.delete(test_y, id_teY, axis=0)
+
+
 	edge_index = np.array([[0,1,2,3,4,5,6,7,8],
 					[9,2,9,4,9,6,9,8,9]
 					], dtype=np.int_)
@@ -160,6 +196,10 @@ if __name__ == '__main__':
 
 	epoch_number = 0
 	best_vloss = 1000000
+	best_f1_score = 0
+	best_auc_score = 0
+	patience = 20
+	no_improvement_counter = 0
 
 	train_losses = []
 	test_losses = []
@@ -255,11 +295,26 @@ if __name__ == '__main__':
 		writer.flush()
 
 		# Track best performance, and save the model's state
+		improvement = False
 		if last_vloss < best_vloss:
 			best_vloss = last_vloss
-			path = 'model/model{}_{}'.format(timestamp, (epoch_number+1))
+			improvement = True
+		if vf1_score > best_f1_score:
+			best_f1_score = vf1_score
+			improvement = True
+		if vauc_score > best_auc_score:
+			best_auc_score = vauc_score
+			improvement = True
+		if improvement:
+			no_improvement_counter = 0
+			path = 'model/model{}_{}'.format(timestamp, (epoch_number + 1))
 			torch.save(model.state_dict(), path)
-			
+		else:
+			no_improvement_counter += 1
+		if no_improvement_counter >= patience:
+			print(f'Early stopping triggered after {epoch_number + 1} epochs')
+			break
+
 		epoch_number += 1
 
 		print('')
