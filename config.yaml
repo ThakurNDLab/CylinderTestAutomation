@@ -1,0 +1,73 @@
+    # Project definitions (do not edit)
+Task: Cylinder Test Trial 3
+scorer: Jyotiray Srivastava
+date: Jan23
+multianimalproject: false
+identity:
+
+    # Project path (change when moving around)
+project_path: /app/Desktop/Jyotirmay/cylinder test/Cylinder Test Trial 3-Jyotiray
+  Srivastava-2023-01-23
+
+    # Annotation data set configuration (and individual video cropping parameters)
+video_sets:
+  /app/Jyotirmay/cylinder test/Cylinder Test Trial 3-Jyotiray Srivastava-2023-01-23/videos/00004reencoded.mp4:
+    crop: 0, 1920, 0, 1080
+  /app/Jyotirmay/cylinder test/Cylinder Test Trial 3-Jyotiray Srivastava-2023-01-23/videos/00005reencoded.mp4:
+    crop: 0, 1920, 0, 1080
+  /app/Jyotirmay/cylinder test/Cylinder Test Trial 3-Jyotiray Srivastava-2023-01-23/videos/00006reencoded.mp4:
+    crop: 0, 1920, 0, 1080
+  /app/Jyotirmay/cylinder test/Cylinder Test Trial 3-Jyotiray Srivastava-2023-01-23/videos/00007.mp4:
+    crop: 0, 1920, 0, 1080
+  /app/Jyotirmay/cylinder test/Cylinder Test Trial 3-Jyotiray Srivastava-2023-01-23/videos/00008.mp4:
+    crop: 0, 1920, 0, 1080
+bodyparts:
+- nose
+- lf1
+- lf2
+- rf1
+- rf2
+- lh1
+- lh2
+- rh1
+- rh2
+- chest
+- cylcenter
+start: 0
+stop: 1
+numframes2pick: 150
+
+    # Plotting configuration
+skeleton:
+- - bodypart1
+  - bodypart2
+- - objectA
+  - bodypart3
+skeleton_color: black
+pcutoff: 0.6
+dotsize: 06
+alphavalue: 0.7
+colormap: rainbow
+
+    # Training,Evaluation and Analysis configuration
+TrainingFraction:
+- 0.95
+iteration: 0
+default_net_type: resnet_50
+default_augmenter: default
+snapshotindex: -1
+batch_size: 8
+
+    # Cropping Parameters (for analysis and outlier frame detection)
+cropping: false
+    #if cropping is true for analysis, then set the values here:
+x1: 0
+x2: 640
+y1: 277
+y2: 624
+
+    # Refinement configuration (parameters from annotation dataset configuration also relevant in this stage)
+corner2move2:
+- 50
+- 50
+move2corner: true
