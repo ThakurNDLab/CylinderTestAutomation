@@ -284,8 +284,6 @@ if __name__ == '__main__':
 					epoch_number + 1)
 		writer.flush()
 
-		path = 'model/model{}_{}'.format(timestamp, (epoch_number + 1))
-
 		improvement = False
 		if last_vloss < best_vloss:
 			best_vloss = last_vloss
@@ -298,6 +296,7 @@ if __name__ == '__main__':
 			improvement = True
 		if improvement:
 			no_improvement_counter = 0
+			path = 'model/model{}_{}'.format(timestamp, (epoch_number + 1))
 			torch.save(model.state_dict(), path)
 		else:
 			no_improvement_counter += 1
