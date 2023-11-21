@@ -26,46 +26,47 @@ def reset_model_state(model):
 
 def cylinder_touch_detection(X, model, num_nodes, edge_index):
 	model.eval()
-	preds = model(X, edge_index)
-	reset_model_state(model)
-	preds = preds.cpu().data.numpy()
-	preds = medfilt(preds, kernel_size=3)
-	preds[:, 0] = np.where(preds[:, 0] >= 0.48, 1, 0)
-	preds[:, 1] = np.where(preds[:, 1] >= 0.48, 1, 0)
-	y = process_actions(preds)
-	y = pd.DataFrame(preds)
+	with torch.no_grad():
+		preds = model(X, edge_index)
+		reset_model_state(model)
+		preds = preds.cpu().data.numpy()
+		preds = medfilt(preds, kernel_size=3)
+		preds[:, 0] = np.where(preds[:, 0] >= 0.48, 1, 0)
+		preds[:, 1] = np.where(preds[:, 1] >= 0.48, 1, 0)
+		y = process_actions(preds)
+		y = pd.DataFrame(preds)
 
-	starts_left, ends_left, starts_right, ends_right = [], [], [], []
-	in_left_touch, in_right_touch = False, False
+		starts_left, ends_left, starts_right, ends_right = [], [], [], []
+		in_left_touch, in_right_touch = False, False
 
-	for i in range(len(y)):
-		# Left touch
-		if y.iloc[i, 0] == 1:
-			if not in_left_touch:
-				in_left_touch = True
-				starts_left.append(i + 1)
-		else:
-			if in_left_touch:
-				in_left_touch = False
-				ends_left.append(i + 1)
+		for i in range(len(y)):
+			# Left touch
+			if y.iloc[i, 0] == 1:
+				if not in_left_touch:
+					in_left_touch = True
+					starts_left.append(i + 1)
+			else:
+				if in_left_touch:
+					in_left_touch = False
+					ends_left.append(i + 1)
 
-		# Right touch
-		if y.iloc[i, 1] == 1:
-			if not in_right_touch:
-				in_right_touch = True
-				starts_right.append(i + 1)
-		else:
-			if in_right_touch:
-				in_right_touch = False
-				ends_right.append(i + 1)
+			# Right touch
+			if y.iloc[i, 1] == 1:
+				if not in_right_touch:
+					in_right_touch = True
+					starts_right.append(i + 1)
+			else:
+				if in_right_touch:
+					in_right_touch = False
+					ends_right.append(i + 1)
 
-		if len(starts_left) + len(starts_right) >= 30:
-			break
+			if len(starts_left) + len(starts_right) >= 30:
+				break
 
-	if in_left_touch:
-		ends_left.append(len(y) + 1)
-	if in_right_touch:
-		ends_right.append(len(y) + 1)
+		if in_left_touch:
+			ends_left.append(len(y) + 1)
+		if in_right_touch:
+			ends_right.append(len(y) + 1)
 
 	starts_left_df = pd.DataFrame(starts_left, columns=['Left_Touch_Start'])
 	ends_left_df = pd.DataFrame(ends_left, columns=['Left_Touch_Ends'])
@@ -114,6 +115,8 @@ def predict_cylinder(filename, project_test_directory, fps, timesteps, pixel, nu
 
 	lstm_dim = (X.shape[2])*num_nodes
 	model = BehaviorModel(lstm_dim=lstm_dim, hidden_dim=256, num_labels=num_actions)
+	model.load_state_dict(torch.load('model.pt'))
+
 	if use_gpu == True:
 		datasheet, left_touches, right_touches, touch_count, touch = cylinder_touch_detection(X.float().cuda(), model.float().cuda(), num_nodes, edge_index.cuda())
 	else:

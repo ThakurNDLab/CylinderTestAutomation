@@ -294,7 +294,6 @@ if __name__ == '__main__':
 					epoch_number + 1)
 		writer.flush()
 
-		# Track best performance, and save the model's state
 		improvement = False
 		if last_vloss < best_vloss:
 			best_vloss = last_vloss
@@ -316,7 +315,7 @@ if __name__ == '__main__':
 			break
 
 		epoch_number += 1
-
+		
 		print('')
 
 	final_path = 'model.pt'
@@ -344,8 +343,8 @@ if __name__ == '__main__':
 	plt.close(f)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(num_epochs), train_losses, label='Train')
-	plt.plot(range(num_epochs), test_losses, label='Test')
+	plt.plot(range(epochs_num), train_losses, label='Train')
+	plt.plot(range(epochs_num), test_losses, label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('Loss')
 	plt.legend()
@@ -353,8 +352,8 @@ if __name__ == '__main__':
 	plt.savefig('loss_plot.tif',dpi=600)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(num_epochs), train_f1_scores, label='Train')
-	plt.plot(range(num_epochs), test_f1_scores, label='Test')
+	plt.plot(range(epochs_num), train_f1_scores, label='Train')
+	plt.plot(range(epochs_num), test_f1_scores, label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('F1 Score')
 	plt.legend()
@@ -362,8 +361,8 @@ if __name__ == '__main__':
 	plt.savefig('f1_plot.tif',dpi=600)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(num_epochs), train_auc_scores, label='Train')
-	plt.plot(range(num_epochs), test_auc_scores, label='Test')
+	plt.plot(range(epochs_num), train_auc_scores, label='Train')
+	plt.plot(range(epochs_num), test_auc_scores, label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('AUC Score')
 	plt.legend()
@@ -374,8 +373,8 @@ if __name__ == '__main__':
 	plt.clf()
 	
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(num_epochs), savgol_filter(train_losses, window_length=5, polyorder=2), label='Train')
-	plt.plot(range(num_epochs), savgol_filter(test_losses, window_length=5, polyorder=2), label='Test')
+	plt.plot(range(epochs_num), savgol_filter(train_losses, window_length=5, polyorder=2), label='Train')
+	plt.plot(range(epochs_num), savgol_filter(test_losses, window_length=5, polyorder=2), label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('Loss')
 	plt.legend()
@@ -383,8 +382,8 @@ if __name__ == '__main__':
 	plt.savefig('loss_plot_smooth.tif',dpi=600)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(num_epochs), savgol_filter(train_f1_scores, window_length=5, polyorder=2), label='Train')
-	plt.plot(range(num_epochs), savgol_filter(test_f1_scores, window_length=5, polyorder=2), label='Test')
+	plt.plot(range(epochs_num), savgol_filter(train_f1_scores, window_length=5, polyorder=2), label='Train')
+	plt.plot(range(epochs_num), savgol_filter(test_f1_scores, window_length=5, polyorder=2), label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('F1 Score')
 	plt.legend()
@@ -392,8 +391,8 @@ if __name__ == '__main__':
 	plt.savefig('f1_plot_smooth.tif',dpi=600)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(num_epochs), savgol_filter(train_auc_scores, window_length=5, polyorder=2), label='Train')
-	plt.plot(range(num_epochs), savgol_filter(test_auc_scores, window_length=5, polyorder=2), label='Test')
+	plt.plot(range(epochs_num), savgol_filter(train_auc_scores, window_length=5, polyorder=2), label='Train')
+	plt.plot(range(epochs_num), savgol_filter(test_auc_scores, window_length=5, polyorder=2), label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('AUC Score')
 	plt.legend()
