@@ -294,8 +294,6 @@ if __name__ == '__main__':
 					epoch_number + 1)
 		writer.flush()
 
-		epoch_number += 1
-
 		improvement = False
 		if last_vloss < best_vloss:
 			best_vloss = last_vloss
@@ -316,6 +314,8 @@ if __name__ == '__main__':
 			print(f'Early stopping triggered after {epoch_number + 1} epochs')
 			break
 
+		epoch_number += 1
+		
 		print('')
 
 	final_path = 'model.pt'
