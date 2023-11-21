@@ -14,9 +14,7 @@ from datetime import datetime
 from sklearn.metrics import multilabel_confusion_matrix, ConfusionMatrixDisplay
 from sklearn.preprocessing import RobustScaler
 import torch.nn.functional as F
-
 from scipy.signal import savgol_filter
-
 from utils import *
 from models import *
 
@@ -32,23 +30,15 @@ batch_size = 256
 parser = argparse.ArgumentParser(description='GC-LSTM')
 args = parser.parse_args()
 
+def set_seed(seed):
+	torch.manual_seed(seed)
+	torch.cuda.manual_seed(seed)
+	torch.cuda.manual_seed_all(seed)
+	torch.backends.cudnn.deterministic = True
+	torch.backends.cudnn.benchmark = False
 
-seed = 42
-np.random.seed(seed)
-torch.manual_seed(seed)
-
-def find_zero_stretches(B, stretch_length=150):
-	stretches = []
-	count = 0
-	for i in range(len(B)):
-		if B[i, 0] == 0 and B[i, 1] == 0:
-			count += 1
-			if count == stretch_length:
-				stretches.append((i - stretch_length + 1, i + 1))
-				count = 0
-		else:
-			count = 0
-	return stretches
+random_seed = 42
+set_seed(random_seed)
 
 if __name__ == '__main__':
 
@@ -113,7 +103,7 @@ if __name__ == '__main__':
 	X = np.asarray(X)
 	Y = np.asarray(Y)
 
-	train_x, test_x, train_y, test_y = train_test_split(X, Y, train_size=0.8, random_state=seed)
+	train_x, test_x, train_y, test_y = train_test_split(X, Y, train_size=0.8, random_state=random_seed)
 	scaler = RobustScaler()
 	train_x = scaler.fit_transform(train_x)
 	test_x = scaler.transform(test_x)
@@ -173,9 +163,9 @@ if __name__ == '__main__':
 	test_y =torch.from_numpy(test_y)
 
 	train = torch.utils.data.TensorDataset(train_x, train_y)
-	train_loader = DataLoader(train, batch_size, shuffle=True, generator=torch.Generator().manual_seed(seed))
+	train_loader = DataLoader(train, batch_size, shuffle=True, generator=torch.Generator().manual_seed(random_seed))
 	test = torch.utils.data.TensorDataset(test_x, test_y)
-	test_loader = DataLoader(test, batch_size, shuffle=True, generator=torch.Generator().manual_seed(seed))
+	test_loader = DataLoader(test, batch_size, shuffle=True, generator=torch.Generator().manual_seed(random_seed))
 
 	print('Starting Training...')
 	print('')
@@ -245,7 +235,7 @@ if __name__ == '__main__':
 			if batch % log_interval == log_interval-1:
 				last_loss = running_loss / log_interval
 				print('  batch {}  training loss: {} and training F1_score: {}'.format(batch + 1, last_loss, tf1_score))
-				tb_x = i * len(train_loader) + i + 1
+				tb_x = batch * len(train_loader) + batch + 1
 				writer.add_scalar('Loss/train', last_loss, tb_x)
 				running_loss = 0
 
@@ -281,7 +271,7 @@ if __name__ == '__main__':
 				if batch % log_interval == log_interval-1:
 					last_vloss = running_vloss / log_interval # loss per batch
 					print('  batch {}  test loss: {} and test F1_score: {}'.format(batch + 1, last_vloss, vf1_score))
-					vb_x = i * len(train_loader) + i + 1
+					vb_x = batch * len(train_loader) + batch + 1
 					writer.add_scalar('Loss/train', last_vloss, vb_x)
 					running_loss = 0
 
@@ -293,6 +283,8 @@ if __name__ == '__main__':
 					{ 'Training' : last_loss, 'Testing' : last_vloss },
 					epoch_number + 1)
 		writer.flush()
+
+		path = 'model/model{}_{}'.format(timestamp, (epoch_number + 1))
 
 		improvement = False
 		if last_vloss < best_vloss:
@@ -306,7 +298,6 @@ if __name__ == '__main__':
 			improvement = True
 		if improvement:
 			no_improvement_counter = 0
-			path = 'model/model{}_{}'.format(timestamp, (epoch_number + 1))
 			torch.save(model.state_dict(), path)
 		else:
 			no_improvement_counter += 1
@@ -343,8 +334,8 @@ if __name__ == '__main__':
 	plt.close(f)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(epochs_num), train_losses, label='Train')
-	plt.plot(range(epochs_num), test_losses, label='Test')
+	plt.plot(range(epoch_number), train_losses, label='Train')
+	plt.plot(range(epoch_number), test_losses, label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('Loss')
 	plt.legend()
@@ -352,8 +343,8 @@ if __name__ == '__main__':
 	plt.savefig('loss_plot.tif',dpi=600)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(epochs_num), train_f1_scores, label='Train')
-	plt.plot(range(epochs_num), test_f1_scores, label='Test')
+	plt.plot(range(epoch_number), train_f1_scores, label='Train')
+	plt.plot(range(epoch_number), test_f1_scores, label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('F1 Score')
 	plt.legend()
@@ -361,8 +352,8 @@ if __name__ == '__main__':
 	plt.savefig('f1_plot.tif',dpi=600)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(epochs_num), train_auc_scores, label='Train')
-	plt.plot(range(epochs_num), test_auc_scores, label='Test')
+	plt.plot(range(epoch_number), train_auc_scores, label='Train')
+	plt.plot(range(epoch_number), test_auc_scores, label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('AUC Score')
 	plt.legend()
@@ -373,8 +364,8 @@ if __name__ == '__main__':
 	plt.clf()
 	
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(epochs_num), savgol_filter(train_losses, window_length=5, polyorder=2), label='Train')
-	plt.plot(range(epochs_num), savgol_filter(test_losses, window_length=5, polyorder=2), label='Test')
+	plt.plot(range(epoch_number), savgol_filter(train_losses, window_length=6, polyorder=3), label='Train')
+	plt.plot(range(epoch_number), savgol_filter(test_losses, window_length=6, polyorder=3), label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('Loss')
 	plt.legend()
@@ -382,8 +373,8 @@ if __name__ == '__main__':
 	plt.savefig('loss_plot_smooth.tif',dpi=600)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(epochs_num), savgol_filter(train_f1_scores, window_length=5, polyorder=2), label='Train')
-	plt.plot(range(epochs_num), savgol_filter(test_f1_scores, window_length=5, polyorder=2), label='Test')
+	plt.plot(range(epoch_number), savgol_filter(train_f1_scores, window_length=6, polyorder=3), label='Train')
+	plt.plot(range(epoch_number), savgol_filter(test_f1_scores, window_length=6, polyorder=3), label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('F1 Score')
 	plt.legend()
@@ -391,8 +382,8 @@ if __name__ == '__main__':
 	plt.savefig('f1_plot_smooth.tif',dpi=600)
 
 	plt.figure(figsize=(10, 5))
-	plt.plot(range(epochs_num), savgol_filter(train_auc_scores, window_length=5, polyorder=2), label='Train')
-	plt.plot(range(epochs_num), savgol_filter(test_auc_scores, window_length=5, polyorder=2), label='Test')
+	plt.plot(range(epoch_number), savgol_filter(train_auc_scores, window_length=6, polyorder=3), label='Train')
+	plt.plot(range(epoch_number), savgol_filter(test_auc_scores, window_length=6, polyorder=3), label='Test')
 	plt.xlabel('Epoch')
 	plt.ylabel('AUC Score')
 	plt.legend()

@@ -65,18 +65,44 @@ def augment_data(x, noise_factor=0.05):
 	x_augmented = x + noise
 	return x_augmented
 
-def process_action_column(data, threshold):
-    change_points = np.where(np.diff(data) != 0)[0] + 1
-    start_point = 0
-    for end_point in change_points:
-        if (end_point - start_point) <= threshold:
-            data[start_point:end_point] = data[start_point - 1]
-        start_point = end_point
-    if (len(data) - start_point) <= threshold:
-        data[start_point:] = data[start_point - 1]
-    return data
+def smoothen_data(arr, min_action_length=12, gap_tolerance=5):
+    num_columns = arr.shape[1]
+    smoothened_arr = np.zeros_like(arr)
 
-def process_actions(data, threshold=3):
-	action_1 = process_action_column(data[:, 0], threshold)
-	action_2 = process_action_column(data[:, 1], threshold)
-	return np.column_stack((action_1, action_2))
+    for column_index in range(num_columns):
+        col = arr[:, column_index]
+        n = len(col)
+        smoothened_col = np.zeros_like(col)
+
+        i = 0
+        while i < n:
+            if col[i] == 1:
+                start = i
+                while i < n and col[i] == 1:
+                    i += 1
+                end = i
+                gap_count = 0
+                while i < n and gap_count <= gap_tolerance and col[i] == 0:
+                    gap_count += 1
+                    i += 1
+                    if i < n and col[i] == 1:
+                        end = i
+                if end - start + gap_count >= min_action_length:
+                    smoothened_col[start:end] = 1
+            i += 1
+        smoothened_arr[:, column_index] = smoothened_col
+    return smoothened_arr
+
+  
+def find_zero_stretches(B, stretch_length=150):
+	stretches = []
+	count = 0
+	for i in range(len(B)):
+		if B[i, 0] == 0 and B[i, 1] == 0:
+			count += 1
+			if count == stretch_length:
+				stretches.append((i - stretch_length + 1, i + 1))
+				count = 0
+		else:
+			count = 0
+	return stretches

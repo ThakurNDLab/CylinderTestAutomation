@@ -9,10 +9,9 @@ import os
 from scipy.signal import medfilt
 
 def set_seed(seed):
-	"""Set the seed for reproducibility in PyTorch."""
 	torch.manual_seed(seed)
 	torch.cuda.manual_seed(seed)
-	torch.cuda.manual_seed_all(seed)  # if using multi-GPU
+	torch.cuda.manual_seed_all(seed)
 	torch.backends.cudnn.deterministic = True
 	torch.backends.cudnn.benchmark = False
 
@@ -29,62 +28,56 @@ def cylinder_touch_detection(X, model, num_nodes, edge_index):
 	with torch.no_grad():
 		preds = model(X, edge_index)
 		reset_model_state(model)
-		preds = preds.cpu().data.numpy()
-		preds = medfilt(preds, kernel_size=3)
-		preds[:, 0] = np.where(preds[:, 0] >= 0.48, 1, 0)
-		preds[:, 1] = np.where(preds[:, 1] >= 0.48, 1, 0)
-		y = process_actions(preds)
-		y = pd.DataFrame(preds)
+	preds = preds.cpu().data.numpy()
+	y = np.where(preds >= 0.5, 1, 0)
+	y = smoothen_data(y)
 
-		starts_left, ends_left, starts_right, ends_right = [], [], [], []
-		in_left_touch, in_right_touch = False, False
+	starts_left = []
+	ends_left = []
+	starts_right = []
+	ends_right = []
 
-		for i in range(len(y)):
-			# Left touch
-			if y.iloc[i, 0] == 1:
-				if not in_left_touch:
-					in_left_touch = True
-					starts_left.append(i + 1)
-			else:
-				if in_left_touch:
-					in_left_touch = False
-					ends_left.append(i + 1)
+	in_left_touch, in_right_touch = False, False
 
-			# Right touch
-			if y.iloc[i, 1] == 1:
-				if not in_right_touch:
-					in_right_touch = True
-					starts_right.append(i + 1)
-			else:
-				if in_right_touch:
-					in_right_touch = False
-					ends_right.append(i + 1)
+	for i, (left_touch, right_touch) in enumerate(y):
 
-			if len(starts_left) + len(starts_right) >= 30:
+		if left_touch == 1 and not in_left_touch:
+			in_left_touch = True
+			starts_left.append(i)
+		elif left_touch == 0 and in_left_touch:
+			in_left_touch = False
+			ends_left.append(i-1)
+
+		if right_touch == 1 and not in_right_touch:
+			in_right_touch = True
+			starts_right.append(i)
+		elif right_touch == 0 and in_right_touch:
+			in_right_touch = False
+			ends_right.append(i-1)
+
+		if len(starts_left) + len(starts_right) >= 30:
+			if not in_left_touch and not in_right_touch:
 				break
 
-		if in_left_touch:
-			ends_left.append(len(y) + 1)
-		if in_right_touch:
-			ends_right.append(len(y) + 1)
+	if in_left_touch:
+		ends_left.append(len(y) - 1)
+	if in_right_touch:
+		ends_right.append(len(y) - 1)
 
-	starts_left_df = pd.DataFrame(starts_left, columns=['Left_Touch_Start'])
-	ends_left_df = pd.DataFrame(ends_left, columns=['Left_Touch_Ends'])
-	starts_right_df = pd.DataFrame(starts_right, columns=['Right_Touch_Start'])
-	ends_right_df = pd.DataFrame(ends_right, columns=['Right_Touch_Ends'])
+	left_df = pd.DataFrame({'Left_Touch_Start': starts_left, 'Left_Touch_Ends': ends_left})
+	right_df = pd.DataFrame({'Right_Touch_Start': starts_right, 'Right_Touch_Ends': ends_right})
 
-	datasheet = pd.concat([starts_left_df, ends_left_df, starts_right_df, ends_right_df], axis=1)
-	return datasheet, len(starts_left), len(starts_right), (len(starts_left) + len(starts_right)), y
+	return left_df, right_df, len(starts_left), len(starts_right), (len(starts_left) + len(starts_right)), pd.DataFrame(y)
 
 def calculate_drags(X, datasheet, touch_start_column, touch_end_column, X_coord_index, Y_coord_index):
 	drags = []
 	for start, end in zip(datasheet[touch_start_column], datasheet[touch_end_column]):
-		start, end = int(start), int(end)  # Ensure integer values
+		start, end = int(start), int(end)
 		dist = 0
 		if 0 <= start < len(X):
 			for j in range(end - start):
-				index1 = start - 2 + j + timesteps - 1
-				index2 = start - 1 + j + timesteps - 1
+				index1 = start + j + timesteps - 1
+				index2 = start + j + 1 + timesteps - 1
 				if index1 < len(X) and index2 < len(X):
 					x1, y1 = X[index1, -1, 0, X_coord_index], X[index1, -1, 1, Y_coord_index]
 					x2, y2 = X[index2, -1, 0, X_coord_index], X[index2, -1, 1, Y_coord_index]
@@ -118,9 +111,9 @@ def predict_cylinder(filename, project_test_directory, fps, timesteps, pixel, nu
 	model.load_state_dict(torch.load('model.pt'))
 
 	if use_gpu == True:
-		datasheet, left_touches, right_touches, touch_count, touch = cylinder_touch_detection(X.float().cuda(), model.float().cuda(), num_nodes, edge_index.cuda())
+		left_data, right_data, left_touches, right_touches, touch_count, touch = cylinder_touch_detection(X.float().cuda(), model.float().cuda(), num_nodes, edge_index.cuda())
 	else:
-		datasheet, left_touches, right_touches, touch_count, touch = cylinder_touch_detection(X.float(), model.float(), num_nodes, edge_index)
+		left_data, right_data, left_touches, right_touches, touch_count, touch = cylinder_touch_detection(X.float(), model.float(), num_nodes, edge_index)
 	print('Left Touch Count is:', left_touches)
 	print('Right Touch Count is:', right_touches)
 	print('Total Touch Count is:', touch_count)
@@ -129,22 +122,18 @@ def predict_cylinder(filename, project_test_directory, fps, timesteps, pixel, nu
 	filename = os.path.splitext(filename)[0]
 	y_path = os.path.join(path, filename + '.csv')
 	touch.to_csv(y_path, index=False)
-	left_touch_freq = left_touches / (((datasheet['Left_Touch_Start'].max())+(timesteps-1))/fps)
-	right_touch_freq = right_touches / (((datasheet['Right_Touch_Start'].max())+(timesteps-1))/fps)
+	left_touch_freq = left_touches / (((left_data['Left_Touch_Start'].max())+(timesteps))/fps)
+	right_touch_freq = right_touches / (((right_data['Right_Touch_Start'].max())+(timesteps))/fps)
 
 	filename_excel = y_path.replace(".csv", "_analysed.xlsx")
+	datasheet = pd.concat([left_data, right_data], axis=1)
 	datasheet.to_excel(filename_excel)
 
-	if len(datasheet['Left_Touch_Start']) != len(datasheet['Left_Touch_Ends']):
-		datasheet = datasheet.iloc[:len(datasheet['Left_Touch_Ends'])-1]
-	if len(datasheet['Right_Touch_Start']) != len(datasheet['Right_Touch_Ends']):
-		datasheet = datasheet.iloc[:len(datasheet['Right_Touch_Ends'])-1]
-	avg_left_len = ((datasheet['Left_Touch_Ends'] - datasheet['Left_Touch_Start']).mean()) / fps
-	avg_right_len = ((datasheet['Right_Touch_Ends'] - datasheet['Right_Touch_Start']).mean()) / fps
-	datasheet = datasheet.dropna(subset=['Left_Touch_Start', 'Left_Touch_Ends', 'Right_Touch_Start', 'Right_Touch_Ends'])
+	avg_left_len = ((left_data['Left_Touch_Ends'] - left_data['Left_Touch_Start']).mean()) / fps
+	avg_right_len = ((right_data['Right_Touch_Ends'] - right_data['Right_Touch_Start']).mean()) / fps
 
-	left_drags = calculate_drags(X, datasheet, 'Left_Touch_Start', 'Left_Touch_Ends', 1, 1)
-	right_drags = calculate_drags(X, datasheet, 'Right_Touch_Start', 'Right_Touch_Ends', 3, 3)
+	left_drags = calculate_drags(X, left_data, 'Left_Touch_Start', 'Left_Touch_Ends', 1, 1)
+	right_drags = calculate_drags(X, right_data, 'Right_Touch_Start', 'Right_Touch_Ends', 3, 3)
 	left_drag_avg = (np.mean(left_drags) / pixel)
 	right_drag_avg = (np.mean(right_drags) / pixel)
 
