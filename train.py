@@ -22,7 +22,7 @@ use_gpu = True
 num_actions = 2
 num_nodes = 10
 
-num_epochs = 15
+num_epochs = 200
 batch_size = 512
 
 def set_seed(seed):
