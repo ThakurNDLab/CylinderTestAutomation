@@ -66,6 +66,15 @@ class BehaviorModel(nn.Module):
 		
 		self.sigmoid = nn.Sigmoid()
 
+		self.freeze_layers()
+
+	def freeze_layers(self):
+		for param in self.gcn1.parameters():
+			param.requires_grad = False
+		for i in range(2):
+			for param in self.classifier[i].parameters():
+				param.requires_grad = False
+
 	def reset_hidden_state(self):
 		self.lstm.reset_hidden_state()
 
